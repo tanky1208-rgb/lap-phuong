@@ -1,0 +1,111 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://sagecell.sagemath.org/static/embedded_sagecell.js"></script>
+    <script>
+      sagecell.makeSagecell({inputLocation: 'div.compute', autoeval: true, hide: ['editor', 'evalButton']});
+    </script>
+  </head>
+  <body>
+    <div class="compute">
+      <script type="text/x-sage">
+      
+import math
+
+def Rz(theta):
+    c = float(math.cos(theta))
+    s = float(math.sin(theta))
+    return matrix(RDF, [
+        [c,-s, 0, 0],
+        [s, c, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
+    ])
+
+def Rx(theta):
+    c = float(math.cos(theta))
+    s = float(math.sin(theta))
+    return matrix(RDF, [
+        [1, 0, 0, 0],
+        [0, c,-s, 0],
+        [0, s, c, 0],
+        [0, 0, 0, 1]
+    ])
+
+def Trans(x, y, z):
+    return matrix(RDF, [
+        [1, 0, 0, x],
+        [0, 1, 0, y],
+        [0, 0, 1, z],
+        [0, 0, 0, 1]
+    ])
+
+def get_local_transform(edge_index, fold_angle):
+    # Định nghĩa mặt vuông
+    v = [
+        vector(RDF, [-1, 0, 0]),
+        vector(RDF, [1, 0, 0]),
+        vector(RDF, [1, 2, 0]),
+        vector(RDF, [-1, 2, 0])
+    ]
+    v_loop = v + [v[0]]
+    
+    Mk = (v_loop[edge_index] + v_loop[edge_index+1]) / 2.0
+    alpha_edge = math.atan2(v_loop[edge_index+1][1] - v_loop[edge_index][1], 
+                            v_loop[edge_index+1][0] - v_loop[edge_index][0])
+    
+    T = Trans(Mk[0], Mk[1], Mk[2])
+    R_z = Rz(alpha_edge + math.pi)
+    R_x = Rx(fold_angle)
+    
+    return T * R_z * R_x
+
+@interact
+def unfold_cube_fixed_bottom(t=slider(0, 1, 0.02, default=1, label='Kéo để trải phẳng (Cố định đáy dưới cùng)')):
+    theta_fold = math.pi / 2
+    theta = (1 - t) * theta_fold
+
+    # Cấu trúc liên kết: Đáy dưới cùng làm mỏ neo
+    tree = [
+        (None, 0), # Mặt 0: Cố định (Mặt dưới cùng được khoanh tròn)
+        (0, 2),    # Mặt 1: Gắn vào cạnh trên (cạnh 2) của Mặt 0
+        (1, 2),    # Mặt 2: Gắn vào cạnh trên (cạnh 2) của Mặt 1 (Tâm chữ thập)
+        (2, 2),    # Mặt 3: Gắn vào cạnh trên (cạnh 2) của Mặt 2 (Đỉnh chữ thập)
+        (2, 3),    # Mặt 4: Gắn vào cạnh trái (cạnh 3) của Mặt 2
+        (2, 1)     # Mặt 5: Gắn vào cạnh phải (cạnh 1) của Mặt 2
+    ]
+
+    global_transforms = [matrix(RDF, 4, 4, 1)] * 6
+    for i in range(1, 6):
+        parent, edge = tree[i]
+        local_T = get_local_transform(edge, theta)
+        global_transforms[i] = global_transforms[parent] * local_T
+
+    plots = []
+    local_vertices = [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [1, 2, 0],
+        [-1, 2, 0]
+    ]
+
+    for i in range(6):
+        T = global_transforms[i]
+        pts = []
+        for v in local_vertices:
+            p = T * vector(RDF, [v[0], v[1], v[2], 1])
+            pts.append((p[0], p[1], p[2]))
+
+        plots.append(polygon3d(pts, color='white', opacity=0.95))
+        pts_closed = pts + [pts[0]]
+        plots.append(line3d(pts_closed, color='#000080', thickness=5))
+        plots.append(point3d(pts, color='red', size=10))
+
+    # Cố định camera, dịch khung hình lên trên một chút để vừa vặn
+    bounding_box = point3d((-6, -2, -2), opacity=0) + point3d((6, 10, 6), opacity=0)
+    show(sum(plots) + bounding_box, frame=False, aspect_ratio=[1,1,1])
+ </script>
+    </div>
+  </body>
+</html>
