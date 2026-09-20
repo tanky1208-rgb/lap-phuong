@@ -62,7 +62,7 @@ def get_local_transform(edge_index, fold_angle):
     return T * R_z * R_x
 
 @interact
-def unfold_cube_fixed_bottom(t=slider(0, 1, 0.02, default=1, label='Kéo để trải phẳng (Cố định đáy dưới cùng)')):
+def unfold_cube_fixed_bottom(t=slider(0, 1, 0.02, default=1, label='Kéo để trải phẳng Hình lập phương')):
     theta_fold = math.pi / 2
     theta = (1 - t) * theta_fold
 
